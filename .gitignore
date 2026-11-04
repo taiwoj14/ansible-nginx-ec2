@@ -1,0 +1,25 @@
+# SSH private keys
+*.pem
+*.key
+*.ppk
+
+# Ansible temporary files
+*.retry
+
+# Sensitive variables
+*.vault
+vault-password.txt
+
+# Environment files
+.env
+
+# Editor files
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Actual Ansible inventory (contains server details)
+inventory/hosts.ini
