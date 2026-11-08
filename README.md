@@ -4,33 +4,31 @@
 
 This project demonstrates automated installation, configuration, and deployment of the Nginx web server on an AWS EC2 Linux instance using Ansible.
 
-Ansible connects to the EC2 managed node over SSH and executes a YAML-based playbook to:
+Ansible connects to the EC2 managed node over SSH and uses a reusable Ansible role to install Nginx, manage its service, and deploy a custom HTML webpage.
 
-- Update system packages.
-- Install Nginx.
-- Start and enable the Nginx service.
-- Deploy a custom HTML webpage.
-
-The project demonstrates practical skills in AWS Cloud, Linux administration, configuration management, infrastructure automation, and version control.
+The project demonstrates practical skills in AWS Cloud, Linux administration, configuration management, infrastructure automation, Ansible Vault, and version control.
 
 ## Project Objectives
 
-- Set up an AWS EC2 Linux instance.
+- Provision and configure an AWS EC2 Linux instance.
 - Establish secure SSH connectivity between Ansible and EC2.
 - Configure Ansible inventory and project settings.
-- Automate Nginx installation and configuration.
+- Organize deployment tasks into a reusable Ansible role.
+- Manage configuration using variables and Jinja2 templates.
+- Use Ansible handlers for configuration changes.
+- Protect sensitive variables using Ansible Vault.
 - Deploy a custom HTML webpage.
 - Verify web server availability.
-- Test Ansible playbook syntax and idempotency.
+- Test playbook syntax and idempotency.
 - Manage project code using Git and GitHub.
 
 ## Project Architecture
 
 The project uses an agentless Ansible architecture.
 
-The Ansible control node runs on Ubuntu through WSL2 on Windows 11. It connects to an AWS EC2 managed node using SSH.
+The Ansible control node runs on Ubuntu through WSL2 on Windows 11. It connects to an AWS EC2 managed node running Amazon Linux 2023 using SSH.
 
-Ansible executes the deployment playbook remotely, installing Nginx and deploying the custom webpage.
+Ansible executes the deployment playbook, which calls the Nginx role to install and configure the web server and deploy the custom webpage.
 
 ### Architecture Flow
 
@@ -41,22 +39,24 @@ Windows 11 Laptop
 Ubuntu (WSL2)
 Ansible Control Node
        |
-       | SSH Connection
-       | Port 22
+       | SSH Connection - Port 22
        v
 AWS EC2 Instance
-Amazon Linux
+Amazon Linux 2023
        |
        v
 Ansible Playbook
        |
-       +---- Update System Packages
+       v
+Nginx Role
        |
        +---- Install Nginx
        |
-       +---- Start and Enable Nginx
+       +---- Manage Nginx Service
        |
-       +---- Deploy Custom HTML
+       +---- Deploy Jinja2 HTML Template
+       |
+       +---- Verify Vault Variable
        |
        v
 Nginx Web Server
@@ -71,11 +71,14 @@ Custom Webpage
 | Technology | Purpose |
 |---|---|
 | AWS EC2 | Cloud infrastructure |
-| Amazon Linux | Managed server operating system |
+| Amazon Linux 2023 | Managed server operating system |
 | Ubuntu WSL2 | Ansible control node |
 | Ansible | Configuration management and automation |
+| Ansible Roles | Reusable automation structure |
+| Ansible Vault | Encryption of sensitive variables |
+| Jinja2 | Dynamic HTML template rendering |
 | Nginx | Web server |
-| YAML | Ansible playbook configuration |
+| YAML | Ansible configuration |
 | SSH | Secure remote connectivity |
 | Git | Version control |
 | GitHub | Source code hosting |
@@ -86,40 +89,56 @@ Custom Webpage
 ansible-nginx-ec2/
 │
 ├── ansible.cfg
+├── .gitignore
+├── README.md
 │
 ├── inventory/
+│   ├── hosts.ini
 │   └── hosts.ini.example
 │
 ├── playbooks/
 │   └── nginx-setup.yml
 │
+├── roles/
+│   └── nginx/
+│       ├── defaults/
+│       │   └── main.yml
+│       ├── handlers/
+│       │   └── main.yml
+│       ├── tasks/
+│       │   └── main.yml
+│       └── templates/
+│           └── index.html.j2
+│
+├── vars/
+│   └── vault.yml
+│
 ├── files/
 │   └── index.html
 │
-├── screenshots/
-│   ├── 01-ec2-instance-running.png
-│   ├── 02-security-group-rules.png
-│   ├── 03-ssh-connection.png
-│   ├── 04-ansible-inventory.png
-│   ├── 05-nginx-playbook.png
-│   ├── 06-successful-playbook-execution.png
-│   ├── 07-nginx-service-running.png
-│   ├── 08-custom-html-browser.png
-│   ├── 09-idempotency-test.png
-│   └── 10-ansible-ping-success.png
-│
-├── .gitignore
-└── README.md
+└── screenshots/
+    ├── 01-ec2-instance-running.png
+    ├── 02-security-group-rules.png
+    ├── 03-ssh-connection.png
+    ├── 04-ansible-inventory.png
+    ├── 05-nginx-playbook.png
+    ├── 06-successful-playbook-execution.png
+    ├── 07-nginx-service-running.png
+    ├── 08-custom-html-browser.png
+    ├── 09-idempotency-test.png
+    └── 10-ansible-ping-success.png
 ```
+
+**Note:** `inventory/hosts.ini` is a local configuration file and is excluded from Git. The encrypted `vars/vault.yml` is maintained separately from the role defaults.
 
 ## Prerequisites
 
 Before running this project, ensure you have:
 
 - An AWS account.
-- An AWS EC2 Linux instance running Amazon Linux.
+- An AWS EC2 instance running Amazon Linux 2023.
 - Ubuntu Linux with Ansible installed.
-- Python 3 available on the managed node.
+- Python available on the managed node.
 - SSH access to the EC2 instance.
 - An SSH private key.
 - Git installed.
@@ -146,7 +165,7 @@ cp inventory/hosts.ini.example inventory/hosts.ini
 Edit the inventory:
 
 ```bash
-nano inventory/hosts.ini
+code inventory/hosts.ini
 ```
 
 Replace the placeholders with your EC2 public IP address and SSH private key location.
@@ -158,13 +177,35 @@ Example:
 YOUR_EC2_PUBLIC_IP ansible_user=ec2-user ansible_ssh_private_key_file=/path/to/your/private-key.pem
 ```
 
-Ensure your private SSH key has appropriate permissions:
+Set appropriate private key permissions:
 
 ```bash
 chmod 400 /path/to/your/private-key.pem
 ```
 
-### 3. Test Ansible Connectivity
+### 3. Configure Ansible Vault
+
+The project uses Ansible Vault to encrypt a demonstration variable.
+
+The encrypted file is:
+
+```text
+vars/vault.yml
+```
+
+The variable used by the playbook is:
+
+```yaml
+app_demo_api_token: "DEMO-ONLY-CHANGE-ME"
+```
+
+The demonstration value is not a production credential.
+
+The Vault password must be kept private and must never be committed to GitHub.
+
+If reproducing the project with your own Vault password, create your own encrypted variables file containing the required variable.
+
+### 4. Test Ansible Connectivity
 
 ```bash
 ansible webservers -m ping
@@ -176,10 +217,12 @@ A successful response should contain:
 "ping": "pong"
 ```
 
-### 4. Check Playbook Syntax
+### 5. Check Playbook Syntax
+
+Because the playbook loads an encrypted Vault file, provide the Vault password:
 
 ```bash
-ansible-playbook playbooks/nginx-setup.yml --syntax-check
+ansible-playbook --syntax-check playbooks/nginx-setup.yml --ask-vault-pass
 ```
 
 Expected result:
@@ -188,31 +231,35 @@ Expected result:
 playbook: playbooks/nginx-setup.yml
 ```
 
-### 5. Execute the Deployment Playbook
+### 6. Execute the Deployment Playbook
 
 ```bash
-ansible-playbook playbooks/nginx-setup.yml
+ansible-playbook playbooks/nginx-setup.yml --ask-vault-pass
 ```
 
-The playbook automatically performs the following tasks:
+Ansible prompts for the Vault password.
 
-1. Updates system packages using DNF.
-2. Installs Nginx.
-3. Starts and enables the Nginx service.
-4. Copies the custom HTML webpage to the Nginx web directory.
+The playbook performs the following operations:
 
-### 6. Verify the Nginx Service
+1. Gathers facts from the EC2 managed node.
+2. Verifies that the encrypted Vault variable is loaded.
+3. Installs Nginx using the DNF package manager.
+4. Removes an obsolete duplicate Nginx configuration file.
+5. Starts and enables the Nginx service.
+6. Deploys the custom HTML page using a Jinja2 template.
 
-Check the service status:
+### 7. Verify the Nginx Service
+
+Check Nginx configuration:
 
 ```bash
-ansible webservers -b -m command -a "systemctl status nginx"
+ansible webservers -b -m command -a "nginx -t"
 ```
 
-Verify the HTTP response:
+Check the HTTP response from the EC2 instance:
 
 ```bash
-ansible webservers -b -m command -a "curl -I http://localhost"
+curl -I http://YOUR_EC2_PUBLIC_IP
 ```
 
 A successful response should contain:
@@ -222,9 +269,9 @@ HTTP/1.1 200 OK
 Server: nginx
 ```
 
-### 7. Access the Deployed Webpage
+### 8. Access the Deployed Webpage
 
-Open your browser and navigate to:
+Open a browser and navigate to:
 
 ```text
 http://YOUR_EC2_PUBLIC_IP
@@ -232,30 +279,46 @@ http://YOUR_EC2_PUBLIC_IP
 
 The custom Ansible-managed webpage should be displayed.
 
+## Ansible Role Design
+
+The Nginx deployment is organized into a reusable role.
+
+- **defaults/main.yml:** Defines default package, service, web directory, ownership, file permissions, and environment variables.
+- **tasks/main.yml:** Installs Nginx, removes the obsolete configuration, manages the service, and deploys the HTML template.
+- **handlers/main.yml:** Defines the Nginx reload handler.
+- **templates/index.html.j2:** Generates the custom HTML page using Jinja2 variables.
+
+The playbook calls the role rather than containing all deployment tasks directly.
+
 ## Testing and Verification
 
 The project was tested successfully through the following activities:
 
 - SSH connectivity to the AWS EC2 instance.
 - Ansible ping test returned `pong`.
-- Nginx installation verified.
-- Nginx service confirmed as active and running.
-- Playbook syntax check passed.
-- Complete playbook execution succeeded.
+- Ansible Vault decryption and variable verification.
+- Playbook syntax validation.
+- Successful Nginx installation.
+- Nginx service confirmed active and enabled.
+- Nginx configuration test passed.
+- Custom HTML webpage successfully deployed.
 - HTTP request returned `200 OK`.
-- Custom HTML webpage successfully deployed and accessed externally.
 - Repeated playbook execution confirmed idempotent behaviour.
+
+### Ansible Vault Verification
+
+A pre-task uses the Ansible `assert` module to verify that `app_demo_api_token` is defined without displaying its value.
 
 ### Idempotency Test
 
 The deployment playbook was executed repeatedly.
 
-The final execution returned:
+The latest successful execution returned:
 
 ```text
 PLAY RECAP
 
-ok=5
+ok=6
 changed=0
 unreachable=0
 failed=0
@@ -301,19 +364,23 @@ The screenshots directory contains evidence of the infrastructure setup, configu
 - A sample inventory file is provided for demonstration.
 - SSH access should be restricted to trusted IP addresses.
 - AWS Security Group rules should follow the principle of least privilege.
-- Sensitive credentials should never be committed to GitHub.
+- Sensitive credentials should be encrypted using Ansible Vault.
+- Vault passwords must never be committed to GitHub.
+- The demonstration Vault variable is not a production secret.
 
 ## Skills Demonstrated
 
 - AWS EC2 administration.
 - Linux server administration.
 - Ansible configuration management.
-- Ansible inventory management.
-- YAML playbook development.
+- Ansible roles and reusable automation.
+- Ansible variables and Jinja2 templates.
+- Ansible handlers.
+- Ansible Vault.
 - SSH connectivity and troubleshooting.
 - Nginx installation and deployment.
 - Infrastructure automation.
-- Ansible idempotency testing.
+- Idempotency testing.
 - Git and GitHub version control.
 
 ## Author
