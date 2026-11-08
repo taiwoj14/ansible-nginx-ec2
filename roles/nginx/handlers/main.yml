@@ -1,0 +1,7 @@
+---
+# Handlers for the Nginx role
+
+- name: Reload Nginx
+  service:
+    name: "{{ service_name }}"
+    state: reloaded

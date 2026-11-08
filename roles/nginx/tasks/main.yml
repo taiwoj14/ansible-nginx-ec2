@@ -1,0 +1,27 @@
+---
+# Tasks for the Nginx role
+
+- name: Install Nginx
+  ansible.builtin.dnf:
+    name: "{{ package_name }}"
+    state: present
+
+- name: Remove duplicate Nginx configuration
+  ansible.builtin.file:
+    path: /etc/nginx/conf.d/ansible-nginx.conf
+    state: absent
+  notify: Reload Nginx
+
+- name: Start and enable Nginx
+  ansible.builtin.service:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+
+- name: Deploy custom HTML page
+  ansible.builtin.template:
+    src: index.html.j2
+    dest: "{{ web_root }}/index.html"
+    owner: "{{ web_user }}"
+    group: "{{ web_group }}"
+    mode: "{{ web_file_mode }}"

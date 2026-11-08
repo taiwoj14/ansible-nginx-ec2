@@ -1,0 +1,10 @@
+---
+# Default variables for the Nginx role
+
+package_name: nginx
+service_name: nginx
+web_root: /usr/share/nginx/html
+web_user: root
+web_group: root
+web_file_mode: '0644'
+deployment_environment: production

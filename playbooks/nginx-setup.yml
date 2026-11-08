@@ -1,29 +1,17 @@
 ---
-- name: Install and configure Nginx on AWS EC2
+- name: Configure Nginx on AWS EC2
   hosts: webservers
   become: yes
 
-  tasks:
-    - name: Update system packages
-      dnf:
-        name: "*"
-        state: latest
+  vars_files:
+    - ../vars/vault.yml
 
-    - name: Install Nginx
-      dnf:
-        name: nginx
-        state: present
+  pre_tasks:
+    - name: Verify Vault variable is loaded
+      ansible.builtin.assert:
+        that:
+          - app_demo_api_token is defined
+        quiet: true
 
-    - name: Start and enable Nginx
-      service:
-        name: nginx
-        state: started
-        enabled: yes
-
-    - name: Deploy custom HTML page
-      copy:
-        src: ../files/index.html
-        dest: /usr/share/nginx/html/index.html
-        owner: root
-        group: root
-        mode: '0644'
+  roles:
+    - nginx
